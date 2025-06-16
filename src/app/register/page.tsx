@@ -20,7 +20,7 @@ export default function RegisterPage() {
     setLoading(true)
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data: { user }, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -31,7 +31,22 @@ export default function RegisterPage() {
         },
       })
 
-      if (error) throw error
+      if (signUpError) throw signUpError
+
+      if (user) {
+        const { error: profileError } = await supabase
+          .from("profiles")
+          .insert([
+            {
+              id: user.id,
+              email: user.email,
+              name: name,
+              role: "student",
+            },
+          ])
+
+        if (profileError) throw profileError
+      }
 
       router.push("/login")
     } catch (error) {
