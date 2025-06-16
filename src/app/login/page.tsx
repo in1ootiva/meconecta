@@ -1,10 +1,10 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { createClient } from '@supabase/supabase-js'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 import Link from "next/link"
 
 export const dynamic = 'force-dynamic'
@@ -13,17 +13,10 @@ export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
-  const [supabase, setSupabase] = useState<any>(null)
-
-  useEffect(() => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    setSupabase(createClient(supabaseUrl, supabaseKey))
-  }, [])
+  const supabase = createClientComponentClient()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!supabase) return
     setLoading(true)
 
     try {
@@ -35,7 +28,6 @@ export default function LoginPage() {
       if (error) throw error
 
       if (data?.user) {
-        // Força o redirecionamento usando window.location
         window.location.href = "/dashboard"
       }
     } catch (error) {
@@ -44,8 +36,6 @@ export default function LoginPage() {
       setLoading(false)
     }
   }
-
-  if (!supabase) return null
 
   return (
     <div className="flex min-h-screen items-center justify-center">

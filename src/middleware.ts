@@ -3,47 +3,46 @@ import { NextResponse } from "next/server"
 import type { NextRequest } from "next/server"
 
 export async function middleware(req: NextRequest) {
-  try {
-    const res = NextResponse.next()
-    const supabase = createMiddlewareClient({ req, res })
+  const res = NextResponse.next()
+  const supabase = createMiddlewareClient({ req, res })
 
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
+  // Verifica se o usuário está autenticado
+  const {
+    data: { session },
+  } = await supabase.auth.getSession()
 
-    // Se não estiver autenticado, redireciona para o login
-    if (!session) {
-      const redirectUrl = new URL("/login", req.url)
-      redirectUrl.searchParams.set("redirectTo", req.nextUrl.pathname)
-      return NextResponse.redirect(redirectUrl)
-    }
-
-    // Verifica se é uma rota administrativa
-    if (req.nextUrl.pathname.startsWith("/dashboard/admin")) {
-      const { data: profile, error } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", session.user.id)
-        .single()
-
-      if (error) {
-        console.error("Erro ao verificar perfil:", error)
-        return NextResponse.redirect(new URL("/dashboard", req.url))
-      }
-
-      // Se não for admin, redireciona para o dashboard
-      if (profile?.role !== "admin") {
-        return NextResponse.redirect(new URL("/dashboard", req.url))
-      }
-    }
-
-    return res
-  } catch (error) {
-    console.error("Erro no middleware:", error)
-    return NextResponse.redirect(new URL("/login", req.url))
+  // Se o usuário estiver autenticado e tentar acessar login/register, redireciona para o dashboard
+  if (session && (req.nextUrl.pathname === '/login' || req.nextUrl.pathname === '/register')) {
+    return NextResponse.redirect(new URL('/dashboard', req.url))
   }
+
+  // Se o usuário não estiver autenticado e tentar acessar páginas protegidas, redireciona para o login
+  if (!session && req.nextUrl.pathname.startsWith('/dashboard')) {
+    return NextResponse.redirect(new URL('/login', req.url))
+  }
+
+  // Verifica se é uma rota administrativa
+  if (req.nextUrl.pathname.startsWith("/dashboard/admin")) {
+    const { data: profile, error } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", session.user.id)
+      .single()
+
+    if (error) {
+      console.error("Erro ao verificar perfil:", error)
+      return NextResponse.redirect(new URL("/dashboard", req.url))
+    }
+
+    // Se não for admin, redireciona para o dashboard
+    if (profile?.role !== "admin") {
+      return NextResponse.redirect(new URL("/dashboard", req.url))
+    }
+  }
+
+  return res
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*"],
+  matcher: ['/dashboard/:path*', '/login', '/register'],
 } 
