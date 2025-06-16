@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -154,11 +155,14 @@ export default function AdminCoursesPage() {
             </CardHeader>
             <CardContent>
               {course.thumbnail_url && (
-                <img
-                  src={course.thumbnail_url}
-                  alt={course.title}
-                  className="w-full h-48 object-cover rounded-md mb-4"
-                />
+                <div className="relative aspect-video mb-4">
+                  <Image
+                    src={course.thumbnail_url}
+                    alt={course.title}
+                    fill
+                    className="object-cover rounded-md"
+                  />
+                </div>
               )}
               <div className="flex gap-2">
                 <Button

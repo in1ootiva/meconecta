@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
@@ -37,11 +37,7 @@ export default function AdminModulesPage() {
     order: 0,
   })
 
-  useEffect(() => {
-    fetchData()
-  }, [])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       // Buscar curso
       const { data: courseData, error: courseError } = await supabase
@@ -58,7 +54,7 @@ export default function AdminModulesPage() {
         .from("modules")
         .select("*")
         .eq("course_id", params.id)
-        .order("order")
+        .order("order", { ascending: true })
 
       if (modulesError) throw modulesError
       setModules(modulesData || [])
@@ -67,7 +63,11 @@ export default function AdminModulesPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [params.id])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   const handleCreateModule = async () => {
     try {
