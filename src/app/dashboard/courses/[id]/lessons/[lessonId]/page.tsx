@@ -196,16 +196,18 @@ export default function LessonPage() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Adicione um comentário..."
+                <h2 className="text-2xl font-bold mb-4">Comentários</h2>
+                <form onSubmit={handleCommentSubmit} className="mb-4">
+                  <Textarea
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
+                    placeholder="Digite seu comentário..."
+                    className="mb-2"
                   />
                   <Button type="submit" disabled={isSubmitting}>
-                    Comentar
+                    Enviar Comentário
                   </Button>
-                </div>
+                </form>
                 <div className="space-y-4">
                   {comments.map((comment) => (
                     <Card key={comment.id}>
