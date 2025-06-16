@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
@@ -11,16 +11,15 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import type { Assignment } from "@/types"
+import { Button } from "@/components/ui/button"
+import { useRouter } from "next/navigation"
 
 export default function AssignmentsPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [status, setStatus] = useState<string>("all")
+  const router = useRouter()
 
-  useEffect(() => {
-    fetchAssignments()
-  }, [status])
-
-  const fetchAssignments = async () => {
+  const fetchAssignments = useCallback(async () => {
     let query = supabase
       .from("assignments")
       .select("*, profiles(name), lessons(title)")
@@ -35,7 +34,11 @@ export default function AssignmentsPage() {
     if (data) {
       setAssignments(data)
     }
-  }
+  }, [status])
+
+  useEffect(() => {
+    fetchAssignments()
+  }, [fetchAssignments])
 
   const handleStatusChange = async (assignmentId: string, newStatus: string) => {
     const { error } = await supabase

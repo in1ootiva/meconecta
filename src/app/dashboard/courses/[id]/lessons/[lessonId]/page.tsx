@@ -10,14 +10,22 @@ import { supabase } from "@/lib/supabase"
 import type { Course, Module, Lesson, Comment, Assignment } from "@/types"
 
 type Profile = {
-  name: string
+  id: string
+  email: string
 }
 
-type CommentWithProfile = Comment & {
+type Comment = {
+  id: string
+  content: string
+  user_id: string
+  created_at: string
   profiles: Profile
 }
 
-type AssignmentWithProfile = Assignment & {
+type Assignment = {
+  id: string
+  status: 'pending' | 'approved' | 'rejected'
+  created_at: string
   profiles: Profile
 }
 
@@ -26,11 +34,12 @@ export default function LessonPage() {
   const [course, setCourse] = useState<Course | null>(null)
   const [module, setModule] = useState<Module | null>(null)
   const [lesson, setLesson] = useState<Lesson | null>(null)
-  const [comments, setComments] = useState<CommentWithProfile[]>([])
-  const [assignments, setAssignments] = useState<AssignmentWithProfile[]>([])
+  const [comments, setComments] = useState<Comment[]>([])
+  const [assignments, setAssignments] = useState<Assignment[]>([])
   const [loading, setLoading] = useState(true)
   const [newComment, setNewComment] = useState("")
   const [newAssignment, setNewAssignment] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const fetchData = useCallback(async () => {
     try {
@@ -67,7 +76,10 @@ export default function LessonPage() {
       // Buscar comentários
       const { data: commentsData, error: commentsError } = await supabase
         .from("comments")
-        .select("*, profiles(name)")
+        .select(`
+          *,
+          profiles:user_id(*)
+        `)
         .eq("lesson_id", params.lessonId)
         .order("created_at", { ascending: false })
 
@@ -77,7 +89,10 @@ export default function LessonPage() {
       // Buscar atividades
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from("assignments")
-        .select("*, profiles(name)")
+        .select(`
+          *,
+          profiles:user_id(*)
+        `)
         .eq("lesson_id", params.lessonId)
         .order("created_at", { ascending: false })
 
@@ -88,55 +103,64 @@ export default function LessonPage() {
     } finally {
       setLoading(false)
     }
-  }, [params.lessonId])
+  }, [params.lessonId, params.id])
 
   useEffect(() => {
     fetchData()
   }, [fetchData])
 
-  const handleAddComment = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("Usuário não autenticado")
+  const handleCommentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newComment.trim()) return
 
-      const { error } = await supabase.from("comments").insert([
-        {
-          lesson_id: params.lessonId,
-          user_id: user.id,
-          content: newComment,
-        },
-      ])
+    setIsSubmitting(true)
 
-      if (error) throw error
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error("Usuário não autenticado")
 
-      setNewComment("")
-      fetchData()
-    } catch (error) {
+    const { error } = await supabase.from("comments").insert([
+      {
+        lesson_id: params.lessonId,
+        user_id: user.id,
+        content: newComment,
+      },
+    ])
+
+    setIsSubmitting(false)
+
+    if (error) {
       console.error("Erro ao adicionar comentário:", error)
+      return
     }
+
+    setNewComment("")
+    fetchData()
   }
 
-  const handleSubmitAssignment = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) throw new Error("Usuário não autenticado")
+  const handleAssignmentSubmit = async () => {
+    setIsSubmitting(true)
 
-      const { error } = await supabase.from("assignments").insert([
-        {
-          lesson_id: params.lessonId,
-          user_id: user.id,
-          content: newAssignment,
-          status: "pending",
-        },
-      ])
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error("Usuário não autenticado")
 
-      if (error) throw error
+    const { error } = await supabase.from("assignments").insert([
+      {
+        lesson_id: params.lessonId,
+        user_id: user.id,
+        content: newAssignment,
+        status: "pending",
+      },
+    ])
 
-      setNewAssignment("")
-      fetchData()
-    } catch (error) {
+    setIsSubmitting(false)
+
+    if (error) {
       console.error("Erro ao enviar atividade:", error)
+      return
     }
+
+    setNewAssignment("")
+    fetchData()
   }
 
   if (loading) {
@@ -178,13 +202,15 @@ export default function LessonPage() {
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                   />
-                  <Button onClick={handleAddComment}>Comentar</Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    Comentar
+                  </Button>
                 </div>
                 <div className="space-y-4">
                   {comments.map((comment) => (
                     <div key={comment.id} className="border-b pb-4">
                       <div className="font-semibold">
-                        {(comment as any).profiles.name}
+                        {comment.profiles.email}
                       </div>
                       <p className="text-gray-600">{comment.content}</p>
                     </div>
@@ -209,7 +235,7 @@ export default function LessonPage() {
                     value={newAssignment}
                     onChange={(e) => setNewAssignment(e.target.value)}
                   />
-                  <Button onClick={handleSubmitAssignment}>
+                  <Button onClick={handleAssignmentSubmit} disabled={isSubmitting}>
                     Enviar Atividade
                   </Button>
                 </div>
@@ -217,7 +243,7 @@ export default function LessonPage() {
                   {assignments.map((assignment) => (
                     <div key={assignment.id} className="border-b pb-4">
                       <div className="font-semibold">
-                        {(assignment as any).profiles.name}
+                        {assignment.profiles.email}
                       </div>
                       <p className="text-gray-600">{assignment.content}</p>
                       <div className="text-sm text-gray-500">

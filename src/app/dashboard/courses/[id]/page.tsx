@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useParams } from "next/navigation"
 import Image from "next/image"
 import { supabase } from "@/lib/supabase"
@@ -24,33 +24,39 @@ export default function CoursePage() {
   } | null>(null)
   const [modules, setModules] = useState<Module[]>([])
 
-  useEffect(() => {
-    fetchData()
-  }, [params.id])
-
-  const fetchData = async () => {
-    // Buscar curso
-    const { data: courseData } = await supabase
+  const fetchData = useCallback(async () => {
+    // Buscar dados do curso
+    const { data: courseData, error: courseError } = await supabase
       .from("courses")
       .select("*")
       .eq("id", params.id)
       .single()
 
-    if (courseData) {
-      setCourse(courseData)
+    if (courseError) {
+      console.error("Erro ao buscar curso:", courseError)
+      return
     }
 
+    setCourse(courseData)
+
     // Buscar módulos
-    const { data: modulesData } = await supabase
+    const { data: modulesData, error: modulesError } = await supabase
       .from("modules")
       .select("*")
       .eq("course_id", params.id)
       .order("order", { ascending: true })
 
-    if (modulesData) {
-      setModules(modulesData)
+    if (modulesError) {
+      console.error("Erro ao buscar módulos:", modulesError)
+      return
     }
-  }
+
+    setModules(modulesData || [])
+  }, [params.id])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   if (!course) {
     return <div>Carregando...</div>
