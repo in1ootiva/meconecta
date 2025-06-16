@@ -1,62 +1,63 @@
 "use client"
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { supabase } from "@/lib/supabase"
+import { createClient } from '@supabase/supabase-js'
 import Link from "next/link"
 
 export const dynamic = 'force-dynamic'
 
 export default function RegisterPage() {
-  const [name, setName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
-  const router = useRouter()
+  const [supabase, setSupabase] = useState<any>(null)
+
+  useEffect(() => {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    setSupabase(createClient(supabaseUrl, supabaseKey))
+  }, [])
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!supabase) return
     setLoading(true)
 
     try {
-      const { data: { user }, error: signUpError } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: {
-          data: {
-            name,
-            role: "student",
-          },
-        },
       })
 
-      if (signUpError) throw signUpError
+      if (error) throw error
 
-      if (user) {
+      if (data?.user) {
+        // Criar perfil do usuário
         const { error: profileError } = await supabase
-          .from("profiles")
+          .from('profiles')
           .insert([
             {
-              id: user.id,
-              email: user.email,
-              name: name,
-              role: "student",
+              id: data.user.id,
+              email: data.user.email,
+              created_at: new Date().toISOString(),
             },
           ])
 
         if (profileError) throw profileError
-      }
 
-      router.push("/login")
+        window.location.href = "/dashboard"
+      }
     } catch (error) {
-      console.error("Erro ao fazer registro:", error)
+      console.error("Erro ao registrar:", error)
     } finally {
       setLoading(false)
     }
   }
+
+  if (!supabase) return null
 
   return (
     <div className="flex min-h-screen items-center justify-center">
@@ -70,15 +71,6 @@ export default function RegisterPage() {
         <form onSubmit={handleRegister}>
           <CardContent>
             <div className="grid w-full items-center gap-4">
-              <div className="flex flex-col space-y-1.5">
-                <Input
-                  type="text"
-                  placeholder="Nome"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                />
-              </div>
               <div className="flex flex-col space-y-1.5">
                 <Input
                   type="email"
