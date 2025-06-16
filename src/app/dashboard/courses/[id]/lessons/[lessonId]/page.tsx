@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { supabase } from "@/lib/supabase"
-import type { Course, Module, Lesson, Comment, Assignment } from "@/types"
+import type { Course, Module, Lesson } from "@/types"
 
 type Profile = {
   id: string
@@ -21,8 +21,8 @@ type Comment = {
   created_at: string
   profiles: Profile
 }
-
 type Assignment = {
+  content: string
   id: string
   status: 'pending' | 'approved' | 'rejected'
   created_at: string
@@ -208,12 +208,15 @@ export default function LessonPage() {
                 </div>
                 <div className="space-y-4">
                   {comments.map((comment) => (
-                    <div key={comment.id} className="border-b pb-4">
-                      <div className="font-semibold">
-                        {comment.profiles.email}
-                      </div>
-                      <p className="text-gray-600">{comment.content}</p>
-                    </div>
+                    <Card key={comment.id}>
+                      <CardContent className="pt-6">
+                        <p className="text-sm text-gray-500 mb-2">
+                          {comment.profiles.email} -{' '}
+                          {new Date(comment.created_at).toLocaleDateString()}
+                        </p>
+                        <p>{comment.content}</p>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               </div>
@@ -241,15 +244,17 @@ export default function LessonPage() {
                 </div>
                 <div className="space-y-4">
                   {assignments.map((assignment) => (
-                    <div key={assignment.id} className="border-b pb-4">
-                      <div className="font-semibold">
-                        {assignment.profiles.email}
-                      </div>
-                      <p className="text-gray-600">{assignment.content}</p>
-                      <div className="text-sm text-gray-500">
-                        Status: {assignment.status}
-                      </div>
-                    </div>
+                    <Card key={assignment.id}>
+                      <CardContent className="pt-6">
+                        <p className="text-sm text-gray-500 mb-2">
+                          Status: {assignment.status}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Enviado em:{' '}
+                          {new Date(assignment.created_at).toLocaleDateString()}
+                        </p>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               </div>

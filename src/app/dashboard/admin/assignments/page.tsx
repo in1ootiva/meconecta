@@ -1,77 +1,90 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { supabase } from "@/lib/supabase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import type { Assignment } from "@/types"
-import { Button } from "@/components/ui/button"
-import { useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabase"
+
+type Assignment = {
+  id: string
+  user_id: string
+  lesson_id: string
+  status: 'pending' | 'approved' | 'rejected'
+  created_at: string
+  user_name: string
+  lesson_title: string
+}
 
 export default function AssignmentsPage() {
   const [assignments, setAssignments] = useState<Assignment[]>([])
-  const [status, setStatus] = useState<string>("all")
-  const router = useRouter()
+  const [status, setStatus] = useState<'pending' | 'approved' | 'rejected'>('pending')
 
   const fetchAssignments = useCallback(async () => {
-    let query = supabase
-      .from("assignments")
-      .select("*, profiles(name), lessons(title)")
-      .order("created_at", { ascending: false })
+    const { data, error } = await supabase
+      .from('assignments')
+      .select(`
+        *,
+        user_name:profiles(email),
+        lesson_title:lessons(title)
+      `)
+      .eq('status', status)
+      .order('created_at', { ascending: false })
 
-    if (status !== "all") {
-      query = query.eq("status", status)
+    if (error) {
+      console.error('Erro ao buscar atividades:', error)
+      return
     }
 
-    const { data } = await query
-
-    if (data) {
-      setAssignments(data)
-    }
+    setAssignments(data || [])
   }, [status])
 
   useEffect(() => {
     fetchAssignments()
   }, [fetchAssignments])
 
-  const handleStatusChange = async (assignmentId: string, newStatus: string) => {
+  const handleStatusChange = async (assignmentId: string, newStatus: 'approved' | 'rejected') => {
     const { error } = await supabase
-      .from("assignments")
+      .from('assignments')
       .update({ status: newStatus })
-      .eq("id", assignmentId)
+      .eq('id', assignmentId)
 
-    if (!error) {
-      fetchAssignments()
+    if (error) {
+      console.error('Erro ao atualizar status:', error)
+      return
     }
+
+    fetchAssignments()
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Atividades</h2>
-        <p className="text-muted-foreground">
-          Gerencie as atividades enviadas pelos alunos.
-        </p>
-      </div>
-
-      <div className="flex justify-end">
-        <Select value={status} onValueChange={setStatus}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filtrar por status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            <SelectItem value="pending">Pendentes</SelectItem>
-            <SelectItem value="approved">Aprovados</SelectItem>
-            <SelectItem value="rejected">Rejeitados</SelectItem>
-          </SelectContent>
-        </Select>
+    <div className="container mx-auto py-8">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Atividades</h1>
+        <div className="flex gap-2">
+          <button
+            className={`px-4 py-2 rounded ${
+              status === 'pending' ? 'bg-primary text-white' : 'bg-gray-200'
+            }`}
+            onClick={() => setStatus('pending')}
+          >
+            Pendentes
+          </button>
+          <button
+            className={`px-4 py-2 rounded ${
+              status === 'approved' ? 'bg-primary text-white' : 'bg-gray-200'
+            }`}
+            onClick={() => setStatus('approved')}
+          >
+            Aprovadas
+          </button>
+          <button
+            className={`px-4 py-2 rounded ${
+              status === 'rejected' ? 'bg-primary text-white' : 'bg-gray-200'
+            }`}
+            onClick={() => setStatus('rejected')}
+          >
+            Rejeitadas
+          </button>
+        </div>
       </div>
 
       <div className="grid gap-4">
@@ -79,30 +92,33 @@ export default function AssignmentsPage() {
           <Card key={assignment.id}>
             <CardHeader>
               <CardTitle>
-                {assignment.profiles?.name || "Usuário"} -{" "}
-                {assignment.lessons?.title || "Aula"}
+                {assignment.user_name || "Usuário"} -{" "}
+                {assignment.lesson_title || "Aula"}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                <p>{assignment.content}</p>
-                <div className="flex justify-end">
-                  <Select
-                    value={assignment.status}
-                    onValueChange={(value) =>
-                      handleStatusChange(assignment.id, value)
-                    }
-                  >
-                    <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pendente</SelectItem>
-                      <SelectItem value="approved">Aprovado</SelectItem>
-                      <SelectItem value="rejected">Rejeitado</SelectItem>
-                    </SelectContent>
-                  </Select>
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-sm text-gray-500">
+                    Data: {new Date(assignment.created_at).toLocaleDateString()}
+                  </p>
                 </div>
+                {status === 'pending' && (
+                  <div className="flex gap-2">
+                    <button
+                      className="px-4 py-2 bg-green-500 text-white rounded"
+                      onClick={() => handleStatusChange(assignment.id, 'approved')}
+                    >
+                      Aprovar
+                    </button>
+                    <button
+                      className="px-4 py-2 bg-red-500 text-white rounded"
+                      onClick={() => handleStatusChange(assignment.id, 'rejected')}
+                    >
+                      Rejeitar
+                    </button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
