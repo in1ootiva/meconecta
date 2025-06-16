@@ -1,36 +1,116 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Plataforma de Cursos de Programação
 
-## Getting Started
+Uma plataforma de streaming de cursos de programação com controle de usuários e gerenciamento de conteúdo.
 
-First, run the development server:
+## Funcionalidades
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Autenticação de usuários (alunos e administradores)
+- Visualização de cursos para alunos
+- Comentários em aulas
+- Envio de atividades
+- Gerenciamento completo de cursos, módulos e aulas para administradores
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Tecnologias Utilizadas
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- Next.js 14
+- TypeScript
+- Tailwind CSS
+- Shadcn UI
+- Supabase (Backend e Banco de Dados)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Configuração do Ambiente
 
-## Learn More
+1. Clone o repositório
+2. Instale as dependências:
+   ```bash
+   npm install
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+3. Crie um arquivo `.env.local` na raiz do projeto com as seguintes variáveis:
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=sua_url_do_supabase
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anonima_do_supabase
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+4. Configure o banco de dados no Supabase com as seguintes tabelas:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+   ```sql
+   -- Tabela de usuários (gerenciada pelo Supabase Auth)
+   create table public.profiles (
+     id uuid references auth.users on delete cascade,
+     name text,
+     role text check (role in ('student', 'admin')),
+     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+     primary key (id)
+   );
 
-## Deploy on Vercel
+   -- Tabela de cursos
+   create table public.courses (
+     id uuid default uuid_generate_v4() primary key,
+     title text not null,
+     description text,
+     thumbnail_url text,
+     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+     updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+   );
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+   -- Tabela de módulos
+   create table public.modules (
+     id uuid default uuid_generate_v4() primary key,
+     course_id uuid references public.courses on delete cascade,
+     title text not null,
+     description text,
+     order integer not null,
+     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+     updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+   );
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+   -- Tabela de aulas
+   create table public.lessons (
+     id uuid default uuid_generate_v4() primary key,
+     module_id uuid references public.modules on delete cascade,
+     title text not null,
+     description text,
+     video_url text,
+     order integer not null,
+     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+     updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+   );
+
+   -- Tabela de comentários
+   create table public.comments (
+     id uuid default uuid_generate_v4() primary key,
+     lesson_id uuid references public.lessons on delete cascade,
+     user_id uuid references public.profiles on delete cascade,
+     content text not null,
+     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+     updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+   );
+
+   -- Tabela de atividades
+   create table public.assignments (
+     id uuid default uuid_generate_v4() primary key,
+     lesson_id uuid references public.lessons on delete cascade,
+     user_id uuid references public.profiles on delete cascade,
+     content text not null,
+     status text check (status in ('pending', 'approved', 'rejected')),
+     created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+     updated_at timestamp with time zone default timezone('utc'::text, now()) not null
+   );
+   ```
+
+5. Execute o projeto em modo de desenvolvimento:
+   ```bash
+   npm run dev
+   ```
+
+## Estrutura do Projeto
+
+- `/src/app` - Páginas da aplicação
+- `/src/components` - Componentes reutilizáveis
+- `/src/lib` - Configurações e utilitários
+- `/src/types` - Definições de tipos TypeScript
+
+## Licença
+
+MIT
