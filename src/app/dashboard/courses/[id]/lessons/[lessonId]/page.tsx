@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,22 +9,30 @@ import { Textarea } from "@/components/ui/textarea"
 import { supabase } from "@/lib/supabase"
 import type { Course, Module, Lesson, Comment, Assignment } from "@/types"
 
+type Profile = {
+  name: string
+}
+
+type CommentWithProfile = Comment & {
+  profiles: Profile
+}
+
+type AssignmentWithProfile = Assignment & {
+  profiles: Profile
+}
+
 export default function LessonPage() {
   const params = useParams()
   const [course, setCourse] = useState<Course | null>(null)
   const [module, setModule] = useState<Module | null>(null)
   const [lesson, setLesson] = useState<Lesson | null>(null)
-  const [comments, setComments] = useState<Comment[]>([])
-  const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [comments, setComments] = useState<CommentWithProfile[]>([])
+  const [assignments, setAssignments] = useState<AssignmentWithProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [newComment, setNewComment] = useState("")
   const [newAssignment, setNewAssignment] = useState("")
 
-  useEffect(() => {
-    fetchData()
-  }, [])
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       // Buscar curso
       const { data: courseData, error: courseError } = await supabase
@@ -80,7 +88,11 @@ export default function LessonPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [params.lessonId])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
 
   const handleAddComment = async () => {
     try {

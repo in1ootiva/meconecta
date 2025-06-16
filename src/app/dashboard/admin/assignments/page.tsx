@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react"
 import { supabase } from "@/lib/supabase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import {
   Select,
   SelectContent,
@@ -13,77 +12,86 @@ import {
 } from "@/components/ui/select"
 import type { Assignment } from "@/types"
 
-export default function AdminAssignmentsPage() {
-  const [assignments, setAssignments] = useState<(Assignment & { profiles: { name: string }, lessons: { title: string } })[]>([])
-  const [loading, setLoading] = useState(true)
+export default function AssignmentsPage() {
+  const [assignments, setAssignments] = useState<Assignment[]>([])
+  const [status, setStatus] = useState<string>("all")
 
   useEffect(() => {
     fetchAssignments()
-  }, [])
+  }, [status])
 
   const fetchAssignments = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("assignments")
-        .select("*, profiles(name), lessons(title)")
-        .order("created_at", { ascending: false })
+    let query = supabase
+      .from("assignments")
+      .select("*, profiles(name), lessons(title)")
+      .order("created_at", { ascending: false })
 
-      if (error) throw error
+    if (status !== "all") {
+      query = query.eq("status", status)
+    }
 
-      setAssignments(data || [])
-    } catch (error) {
-      console.error("Erro ao buscar atividades:", error)
-    } finally {
-      setLoading(false)
+    const { data } = await query
+
+    if (data) {
+      setAssignments(data)
     }
   }
 
-  const handleUpdateStatus = async (assignmentId: string, status: string) => {
-    try {
-      const { error } = await supabase
-        .from("assignments")
-        .update({ status })
-        .eq("id", assignmentId)
+  const handleStatusChange = async (assignmentId: string, newStatus: string) => {
+    const { error } = await supabase
+      .from("assignments")
+      .update({ status: newStatus })
+      .eq("id", assignmentId)
 
-      if (error) throw error
-
+    if (!error) {
       fetchAssignments()
-    } catch (error) {
-      console.error("Erro ao atualizar status:", error)
     }
-  }
-
-  if (loading) {
-    return <div>Carregando...</div>
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">Gerenciar Atividades</h1>
-      <div className="grid grid-cols-1 gap-6">
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight">Atividades</h2>
+        <p className="text-muted-foreground">
+          Gerencie as atividades enviadas pelos alunos.
+        </p>
+      </div>
+
+      <div className="flex justify-end">
+        <Select value={status} onValueChange={setStatus}>
+          <SelectTrigger className="w-[180px]">
+            <SelectValue placeholder="Filtrar por status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="pending">Pendentes</SelectItem>
+            <SelectItem value="approved">Aprovados</SelectItem>
+            <SelectItem value="rejected">Rejeitados</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="grid gap-4">
         {assignments.map((assignment) => (
           <Card key={assignment.id}>
             <CardHeader>
-              <CardTitle>{assignment.lessons.title}</CardTitle>
-              <CardDescription>
-                Atividade enviada por {assignment.profiles.name}
-              </CardDescription>
+              <CardTitle>
+                {assignment.profiles?.name || "Usuário"} -{" "}
+                {assignment.lessons?.title || "Aula"}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                <p className="text-gray-600">{assignment.content}</p>
-                <div className="flex items-center gap-4">
-                  <span className="text-sm text-gray-500">
-                    Status atual: {assignment.status}
-                  </span>
+                <p>{assignment.content}</p>
+                <div className="flex justify-end">
                   <Select
-                    defaultValue={assignment.status}
+                    value={assignment.status}
                     onValueChange={(value) =>
-                      handleUpdateStatus(assignment.id, value)
+                      handleStatusChange(assignment.id, value)
                     }
                   >
                     <SelectTrigger className="w-[180px]">
-                      <SelectValue placeholder="Selecione o status" />
+                      <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="pending">Pendente</SelectItem>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useParams } from "next/navigation"
 import { supabase } from "@/lib/supabase"
 import { Button } from "@/components/ui/button"
@@ -25,7 +25,7 @@ export default function LessonsPage() {
     order: 0,
   })
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     const { data } = await supabase
       .from("lessons")
       .select("*")
@@ -35,11 +35,11 @@ export default function LessonsPage() {
     if (data) {
       setLessons(data)
     }
-  }
+  }, [params.moduleId])
 
   useEffect(() => {
     fetchData()
-  }, [params.moduleId])
+  }, [fetchData])
 
   const handleCreateLesson = async () => {
     const { error } = await supabase.from("lessons").insert({

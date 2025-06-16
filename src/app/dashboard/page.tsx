@@ -1,62 +1,72 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import Image from "next/image"
 import { supabase } from "@/lib/supabase"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import type { Course } from "@/types"
-import Link from "next/link"
 
 export default function DashboardPage() {
   const [courses, setCourses] = useState<Course[]>([])
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const fetchCourses = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("courses")
-          .select("*")
-          .order("created_at", { ascending: false })
-
-        if (error) throw error
-
-        setCourses(data || [])
-      } catch (error) {
-        console.error("Erro ao buscar cursos:", error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
     fetchCourses()
   }, [])
 
-  if (loading) {
-    return <div>Carregando...</div>
+  const fetchCourses = async () => {
+    const { data } = await supabase
+      .from("courses")
+      .select("*")
+      .order("created_at", { ascending: false })
+
+    if (data) {
+      setCourses(data)
+    }
   }
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">Cursos Disponíveis</h1>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight">Meus Cursos</h2>
+        <p className="text-muted-foreground">
+          Acesse seus cursos e continue aprendendo.
+        </p>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {courses.map((course) => (
-          <Link key={course.id} href={`/dashboard/courses/${course.id}`}>
-            <Card className="hover:shadow-lg transition-shadow">
-              <CardHeader>
-                <CardTitle>{course.title}</CardTitle>
-                <CardDescription>{course.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                {course.thumbnail_url && (
-                  <img
+          <Card key={course.id}>
+            <CardHeader>
+              <CardTitle>{course.title}</CardTitle>
+              <CardDescription>{course.description}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {course.thumbnail_url && (
+                <div className="relative aspect-video mb-4">
+                  <Image
                     src={course.thumbnail_url}
                     alt={course.title}
-                    className="w-full h-48 object-cover rounded-md"
+                    fill
+                    className="object-cover rounded-md"
                   />
-                )}
-              </CardContent>
-            </Card>
-          </Link>
+                </div>
+              )}
+              <Button
+                onClick={() =>
+                  window.location.href = `/dashboard/courses/${course.id}`
+                }
+              >
+                Acessar Curso
+              </Button>
+            </CardContent>
+          </Card>
         ))}
       </div>
     </div>
